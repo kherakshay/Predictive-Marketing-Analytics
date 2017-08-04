@@ -1,0 +1,2353 @@
+ proc sort data = in.trans_data dupout = temp nodupkey out = temp_a;
+  by OID_CLIENT_DIM avg_days_between
+ year1_Dental_net_rev
+ year1_Dental_units
+ year1_Exam_net_rev
+ year1_Exam_units
+ year1_Food_net_rev
+ year1_Food_units
+ year1_Grooming_net_rev
+ year1_Grooming_units
+ year1_Hospitalized_net_rev
+ year1_Hospitalized_units
+ year1_Laboratory_net_rev
+ year1_Laboratory_units
+ year1_Other_net_rev
+ year1_Other_units
+ year1_Parasite_net_rev
+ year1_Parasite_units
+ year1_Prescription_net_rev
+ year1_Prescription_units
+ year1_Radiology_net_rev
+ year1_Radiology_units
+ year1_Retail_net_rev
+ year1_Retail_units
+ year1_Surgery_net_rev
+ year1_Surgery_units
+ year1_Vaccination_net_rev
+ year1_Vaccination_units
+ year1_boarding_net_rev
+ year1_boarding_units
+ year1_num_invoices
+ year1_tot_net_rev
+ year1_tot_units
+ year2_Dental_net_rev
+ year2_Dental_units
+ year2_Exam_net_rev
+ year2_Exam_units
+ year2_Food_net_rev
+ year2_Food_units
+ year2_Grooming_net_rev
+ year2_Grooming_units
+ year2_Hospitalized_net_rev
+ year2_Hospitalized_units
+ year2_Laboratory_net_rev
+ year2_Laboratory_units
+ year2_Other_net_rev
+ year2_Other_units
+ year2_Parasite_net_rev
+ year2_Parasite_units
+ year2_Prescription_net_rev
+ year2_Prescription_units
+ year2_Radiology_net_rev
+ year2_Radiology_units
+ year2_Retail_net_rev
+ year2_Retail_units
+ year2_Surgery_net_rev
+ year2_Surgery_units
+ year2_Vaccination_net_rev
+ year2_Vaccination_units
+ year2_boarding_net_rev
+ year2_boarding_units
+ year2_num_invoices
+ year2_tot_net_rev
+ year2_tot_units
+ CLINIC_EXT_ID;
+ run;
+
+data temp_a;
+  set temp_a;
+  CLINIC_EXT_ID_1 = 1 * CLINIC_EXT_ID;
+run;
+
+data temp_a (rename = (CLINIC_EXT_ID_1 = CLINIC_EXT_ID));
+  set temp_a (drop = CLINIC_EXT_ID) ;
+run;
+
+data temp_a;
+  set temp_a;
+  if CLINIC_EXT_ID = . then delete;
+run;
+
+proc sql;
+ select count (distinct CLINIC_EXT_ID) as clinic_cnt from temp_a;
+quit;
+
+/*** rolling at store level ***/
+proc sort data = temp_a;
+by CLINIC_EXT_ID;
+run;
+
+proc means data = temp_a noprint sum;
+ by CLINIC_EXT_ID;
+ var year1_Dental_net_rev
+ year1_Dental_units
+ year1_Exam_net_rev
+ year1_Exam_units
+ year1_Food_net_rev
+ year1_Food_units
+ year1_Grooming_net_rev
+ year1_Grooming_units
+ year1_Hospitalized_net_rev
+ year1_Hospitalized_units
+ year1_Laboratory_net_rev
+ year1_Laboratory_units
+ year1_Other_net_rev
+ year1_Other_units
+ year1_Parasite_net_rev
+ year1_Parasite_units
+ year1_Prescription_net_rev
+ year1_Prescription_units
+ year1_Radiology_net_rev
+ year1_Radiology_units
+ year1_Retail_net_rev
+ year1_Retail_units
+ year1_Surgery_net_rev
+ year1_Surgery_units
+ year1_Vaccination_net_rev
+ year1_Vaccination_units
+ year1_boarding_net_rev
+ year1_boarding_units
+ year1_num_invoices
+ year1_tot_net_rev
+ year1_tot_units
+ year2_Dental_net_rev
+ year2_Dental_units
+ year2_Exam_net_rev
+ year2_Exam_units
+ year2_Food_net_rev
+ year2_Food_units
+ year2_Grooming_net_rev
+ year2_Grooming_units
+ year2_Hospitalized_net_rev
+ year2_Hospitalized_units
+ year2_Laboratory_net_rev
+ year2_Laboratory_units
+ year2_Other_net_rev
+ year2_Other_units
+ year2_Parasite_net_rev
+ year2_Parasite_units
+ year2_Prescription_net_rev
+ year2_Prescription_units
+ year2_Radiology_net_rev
+ year2_Radiology_units
+ year2_Retail_net_rev
+ year2_Retail_units
+ year2_Surgery_net_rev
+ year2_Surgery_units
+ year2_Vaccination_net_rev
+ year2_Vaccination_units
+ year2_boarding_net_rev
+ year2_boarding_units
+ year2_num_invoices
+ year2_tot_net_rev
+ year2_tot_units;
+ output out = temp_b (drop = _type_ _freq_)sum= mean(avg_days_between) = avg_days_between;
+run;
+/*
+proc print data = temp_a;
+var CLINIC_EXT_ID avg_days_between;
+where CLINIC_EXT_ID = 101;
+run; 
+
+proc means data = in.tran_subset noprint;
+ by id category brand company;
+ var purchaseamount purchasequantity;
+output out = in.ak (drop = _type_ _freq_) n(purchaseamount) = pq_c_b_c_n sum(purchaseamount) = pa_c_b_c_sum sum(purchasequantity) = pq_c_b_c_sum;
+run;
+*/
+
+/* Clinic_dim */
+data Clinic_dim;
+ set in.Clinic_dim;
+CLINIC_EXT_ID_1 = CLINIC_EXT_ID * 1;
+run;
+
+data Clinic_dim (rename = (CLINIC_EXT_ID_1 = CLINIC_EXT_ID));
+ set Clinic_dim (drop = CLINIC_EXT_ID);
+run; 
+
+proc sql;
+ select count (distinct CLINIC_EXT_ID) as clinic_cnt_1 from Clinic_dim;
+quit;
+
+proc sql;
+ select count (distinct OID_CLINIC_DIM) as clinic_cnt_2 from Clinic_dim;
+quit;
+
+proc means data = Clinic_dim n nmiss;
+run;
+/*** merging trans_data and clinic_dim ***/
+proc sort data = temp_b nodupkey;
+by CLINIC_EXT_ID;
+run;
+
+proc sort data = Clinic_dim nodupkey;
+by CLINIC_EXT_ID;
+run;
+
+data ak.clinics_1;
+merge temp_b (in=a) Clinic_dim (in=b);
+by CLINIC_EXT_ID;
+if a;
+run;
+
+proc means data = ak.clinics_1 n nmiss;
+run;
+
+/* Orders_past_2years */
+proc means data = in.Orders_past_2years n nmiss;
+run;
+
+proc univariate data = in.Orders_past_2years;
+var order_date revenue;
+run; 
+
+proc print data = in.Orders_past_2years;
+where revenue gt 25000 or revenue lt -25000;
+run;
+
+proc sql;
+create table temp as 
+select OID_CLINIC_DIM, count (distinct order_date) as num_orders_past2yr from in.Orders_past_2years
+group by OID_CLINIC_DIM;
+quit;
+
+proc sort data = in.Orders_past_2years;
+by OID_CLINIC_DIM;
+run;
+
+proc means data = in.Orders_past_2years noprint;
+ by OID_CLINIC_DIM;
+ var revenue exam parasite vaccine laboratory radiology dental hospitalized surgery grooming boarding discounts food other retail
+     prescription wellness_plan;
+ output out = temp_a (drop = _type_ _freq_)sum= ;
+run;
+
+data temp_a;
+ set temp_a;
+rename revenue = revenue_past_2yr;
+rename exam = exam_past_2yr;
+rename parasite = parasite_past_2yr;
+rename vaccine = vaccine_past_2yr;
+rename laboratory = laboratory_past_2yr;
+rename radiology = radiology_past_2yr;
+rename dental = dental_past_2yr;
+rename hospitalized = hospitalized_past_2yr;
+rename surgery = surgery_past_2yr;
+rename grooming = grooming_past_2yr;
+rename boarding = boarding_past_2yr;
+rename discounts = discounts_past_2yr;
+rename food = food_past_2yr;
+rename other = other_past_2yr;
+rename retail = retail_past_2yr;
+rename prescription = prescription_past_2yr;
+rename wellness_plan = wellness_plan_past_2yr;
+run;
+
+proc sort data = temp nodupkey;
+by OID_CLINIC_DIM;
+run;
+
+proc sort data = temp_a nodupkey;
+by OID_CLINIC_DIM;
+run;
+
+proc sort data = ak.Clinics_1 nodupkey;
+by OID_CLINIC_DIM;
+run;
+
+data ak.Clinics_1;
+merge ak.Clinics_1 (in=a) temp (in=b) temp_a (in=c);
+by OID_CLINIC_DIM;
+if a;
+run;
+
+/* Patient_dim */
+
+proc sort data = in.Patient_dim;
+by OID_CLINIC_DIM;
+run;
+ 
+/* Survey data */
+
+proc sort data = in.Survey_data;
+by OID_CLINIC_DIM;
+run;
+
+proc means data = in.Survey_data n nmiss;
+run;
+
+proc univariate data = in.Survey_data;
+run;
+
+proc means data = in.Survey_data noprint;
+ by OID_CLINIC_DIM;
+ var OVERALL_SAT
+LIKELY_RECOMMEND
+LIKELY_RETURN
+HOSPITAL_ATMOSPHERE
+STAFF_FRIENDLY
+STAFF_PREPARED
+KEPT_INFORMED
+VET_KNOWLEDGE
+VET_COMMUNICATE
+PET_CARE
+CARING_AT_HOME
+COST_NEXT_VISIT
+PET_NEXT_VISIT
+CHECKOUT_PROCESS
+PAYMENT_OPTIONS
+FAIR_PRICES;
+ output out = temp_b (drop = _type_ _freq_)mean= ;
+run; 
+
+proc sort data = temp_b nodupkey;
+by OID_CLINIC_DIM;
+run;
+
+proc sort data = ak.Clinics_1 nodupkey;
+by OID_CLINIC_DIM;
+run;
+
+data ak.Clinics_1;
+merge ak.Clinics_1 (in=a) temp_b (in=b);
+by OID_CLINIC_DIM;
+if a;
+run;
+
+/* Hospital_stats_au */
+
+proc sql;
+ select count (distinct AU) as au_cnt from in.Hospital_stats_au;
+quit;
+
+proc means data = in.Hospital_stats_au n nmiss;
+run;
+
+proc univariate data = in.Hospital_stats_au;
+run;
+
+data in.Hospital_stats_au;
+ set in.Hospital_stats_au;
+rename AU = CLINIC_EXT_ID;
+run;
+
+proc sort data = in.Hospital_stats_au nodupkey;
+by CLINIC_EXT_ID;
+run;
+
+proc sort data = ak.Clinics_1 nodupkey;
+by CLINIC_EXT_ID;
+run;
+
+data ak.Clinics_1;
+merge ak.Clinics_1 (in=a) in.Hospital_stats_au (in=b);
+by CLINIC_EXT_ID;
+if a;
+run;
+
+/*Survey_data*/
+
+proc means data = in.Survey_data n nmiss;
+run;
+
+data Survey_data;
+ set in.Survey_data;
+ format COMPLETE_SASDATE ddmmyy10.;
+run;
+
+data _null_;
+date1 = mdy (9,01,2013);
+date2 = mdy (8,31,2014);
+date3 = mdy (9,01,2014);
+date4 = mdy (8,31,2015);
+put date1 date2 date3 date4;
+run;
+
+data Survey_data;
+ set Survey_data;
+ year_1 = 0;
+ year_2 = 0;
+ if COMPLETE_SASDATE <= 19966 then year_1 = 1;
+ if 19967 <= COMPLETE_SASDATE <= 20331 then year_2 = 1;
+run;
+
+data temp;
+ set survey_data;
+ sum = year_1+year_2;
+run;
+
+proc freq data = temp;
+tables sum;
+run;
+
+proc means data = temp sum;
+var year_1 year_2 sum;
+run;
+
+proc contents data = survey_data;
+run;
+
+proc sort data = survey_data;
+by OID_CLIENT_DIM;
+run;
+
+proc means data = Survey_data noprint;
+ by OID_CLIENT_DIM;
+ where year_1 = 1;
+ var CARING_AT_HOME
+CHECKOUT_PROCESS
+COST_NEXT_VISIT
+FAIR_PRICES
+HOSPITAL_ATMOSPHERE
+KEPT_INFORMED
+LIKELY_RECOMMEND
+LIKELY_RETURN
+OVERALL_SAT
+PAYMENT_OPTIONS
+PET_CARE
+PET_NEXT_VISIT
+STAFF_FRIENDLY
+STAFF_PREPARED
+VET_COMMUNICATE
+VET_KNOWLEDGE;
+output out = survey_means (drop = _type_ _freq_) mean=;
+run;
+
+data survey_means_1;
+ set survey_means;
+ rename CARING_AT_HOME=CARING_AT_HOME_y1;
+ rename CHECKOUT_PROCESS=CHECKOUT_PROCESS_y1;
+ rename COST_NEXT_VISIT=COST_NEXT_VISIT_y1;
+ rename FAIR_PRICES=FAIR_PRICES_y1;
+ rename HOSPITAL_ATMOSPHERE=HOSPITAL_ATMOSPHERE_y1;
+ rename KEPT_INFORMED=KEPT_INFORMED_y1;
+ rename LIKELY_RECOMMEND=LIKELY_RECOMMEND_y1;
+ rename LIKELY_RETURN=LIKELY_RETURN_y1;
+ rename OVERALL_SAT=OVERALL_SAT_y1;
+ rename PAYMENT_OPTIONS=PAYMENT_OPTIONS_y1;
+ rename PET_CARE=PET_CARE_y1;
+ rename PET_NEXT_VISIT=PET_NEXT_VISIT_y1;
+ rename STAFF_FRIENDLY=STAFF_FRIENDLY_y1;
+ rename STAFF_PREPARED=STAFF_PREPARED_y1;
+ rename VET_COMMUNICATE=VET_COMMUNICATE_y1;
+ rename VET_KNOWLEDGE=VET_KNOWLEDGE_y1;
+run;
+
+proc contents data = survey_means_1;
+run;
+
+proc means data = Survey_data noprint;
+ by OID_CLIENT_DIM;
+ where year_2 = 1;
+ var CARING_AT_HOME
+CHECKOUT_PROCESS
+COST_NEXT_VISIT
+FAIR_PRICES
+HOSPITAL_ATMOSPHERE
+KEPT_INFORMED
+LIKELY_RECOMMEND
+LIKELY_RETURN
+OVERALL_SAT
+PAYMENT_OPTIONS
+PET_CARE
+PET_NEXT_VISIT
+STAFF_FRIENDLY
+STAFF_PREPARED
+VET_COMMUNICATE
+VET_KNOWLEDGE;
+output out = survey_means_2 (drop = _type_ _freq_) mean=;
+run;
+
+data survey_means_2;
+ set survey_means_2;
+ rename CARING_AT_HOME=CARING_AT_HOME_y2;
+ rename CHECKOUT_PROCESS=CHECKOUT_PROCESS_y2;
+ rename COST_NEXT_VISIT=COST_NEXT_VISIT_y2;
+ rename FAIR_PRICES=FAIR_PRICES_y2;
+ rename HOSPITAL_ATMOSPHERE=HOSPITAL_ATMOSPHERE_y2;
+ rename KEPT_INFORMED=KEPT_INFORMED_y2;
+ rename LIKELY_RECOMMEND=LIKELY_RECOMMEND_y2;
+ rename LIKELY_RETURN=LIKELY_RETURN_y2;
+ rename OVERALL_SAT=OVERALL_SAT_y2;
+ rename PAYMENT_OPTIONS=PAYMENT_OPTIONS_y2;
+ rename PET_CARE=PET_CARE_y2;
+ rename PET_NEXT_VISIT=PET_NEXT_VISIT_y2;
+ rename STAFF_FRIENDLY=STAFF_FRIENDLY_y2;
+ rename STAFF_PREPARED=STAFF_PREPARED_y2;
+ rename VET_COMMUNICATE=VET_COMMUNICATE_y2;
+ rename VET_KNOWLEDGE=VET_KNOWLEDGE_y2;
+run;
+
+proc contents data = survey_means_2;
+run;
+
+proc sort data = ak.Client_1 nodupkey;
+by OID_CLIENT_DIM;
+run;
+
+proc sort data = survey_means_1 nodupkey;
+by OID_CLIENT_DIM;
+run;
+
+proc sort data = survey_means_2 nodupkey;
+by OID_CLIENT_DIM;
+run;
+
+data ak.Client_1;
+merge ak.Client_1 (in=a) survey_means_1 (in=b) survey_means_2 (in=c);
+by OID_CLIENT_DIM;
+if a;
+run;
+
+proc contents data = ak.Client_1;
+run;
+
+proc contents data = in.Hospital_stats_au;
+run;
+ 
+proc means data = in.Hospital_stats_au n nmiss;
+run;
+
+proc univariate data = in.Hospital_stats_au;
+run;
+
+data hosp;
+ set in.Hospital_stats_au;
+LOG_Marketing_spend_2013 = log (Marketing_spend_2013);
+LOG_Marketing_spend_2014 = log (Marketing_spend_2014);
+run;
+
+proc univariate data = hosp;
+var LOG_Marketing_spend_2013 LOG_Marketing_spend_2014;
+run;
+
+proc corr data = hosp;
+var Marketing_spend_2013
+Marketing_spend_2014
+LOG_Marketing_spend_2013
+LOG_Marketing_spend_2014
+perc_hh_with_kids
+median_age
+PERC_UNEMPLOYED
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+num_competition
+vet_years_experience
+tenure_vet
+perc_turnover_vet;
+run;
+
+proc fastclus data = hosp maxclusters = 4 out = clus ;
+var
+Marketing_spend_2014 
+median_age 
+MEDIAN_HH_INCOME 
+perc_hh_with_kids 
+PERC_UNEMPLOYED 
+num_competition 
+vet_years_experience
+tenure_vet
+perc_turnover_vet
+;
+run; 
+
+proc discrim data= clus out=output scores = x method=normal anova;
+   class cluster ;
+   priors prop;
+   id CLINIC_EXT_ID;
+   var  
+Marketing_spend_2014 
+median_age 
+MEDIAN_HH_INCOME 
+perc_hh_with_kids 
+PERC_UNEMPLOYED 
+num_competition 
+vet_years_experience
+tenure_vet
+perc_turnover_vet
+;
+run;
+
+proc reg data = ak.Clinics_1;
+model year1_tot_units = avg_days_between
+year1_Dental_units
+year1_Exam_units
+year1_Food_units
+year1_Grooming_units
+year1_Hospitalized_units
+year1_Laboratory_units
+year1_Other_units
+year1_Parasite_units
+year1_Prescription_units
+year1_Radiology_units
+year1_Retail_units
+year1_Surgery_units
+year1_Vaccination_units
+year1_boarding_units
+year1_num_invoices;
+output out = resid p = PUNITS r = RUNITS student = student;
+run;quit;
+
+proc standard data = in.Hospital_stats_au mean=0 std=1 out=standard;
+var 
+MEDIAN_HH_INCOME
+Marketing_spend_2014
+PERC_UNEMPLOYED
+perc_hh_with_kids
+;
+run;
+
+proc fastclus data = standard maxclusters = 6 out = clus ;
+var
+MEDIAN_HH_INCOME
+Marketing_spend_2014
+PERC_UNEMPLOYED
+perc_hh_with_kids
+;
+run;
+
+proc discrim data= work.clus out=output scores = x method=normal anova;
+ class cluster ;
+ priors prop;
+ id CLINIC_EXT_ID;
+ var  
+MEDIAN_HH_INCOME
+Marketing_spend_2014
+PERC_UNEMPLOYED
+perc_hh_with_kids
+ ;
+run;
+
+proc contents data = in.Hospital_stats_au;
+run;
+
+/*Vaccination Y1*/
+data ak.vaccination_y1;
+ set ak.Client_1 (keep = year1_Vaccination_net_rev
+year1_Vaccination_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+bpt_1 = 0;
+bpt_2 = 0;
+bpt_3 = 0;
+if year1_Vaccination_net_rev le 0 then delete;
+if year1_Vaccination_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Vaccination_price = year1_Vaccination_net_rev/year1_Vaccination_units;
+if year1_Vaccination_price gt 16 then bpt_1 = 1;
+if year1_Vaccination_price gt 20 then bpt_2 = 1;
+if year1_Vaccination_price gt 22 then bpt_3 = 1;
+run;
+
+proc means data = ak.vaccination_y1 n nmiss;
+run;
+
+proc univariate data = ak.vaccination_y1;
+run;
+
+proc univariate data = ak.vaccination_y1;
+var year1_Vaccination_price;
+run;
+
+proc means data = ak.Client_1 sum;
+var year1_Dental_net_rev
+year1_Dental_units
+year1_Exam_net_rev
+year1_Exam_units
+year1_Food_net_rev
+year1_Food_units
+year1_Grooming_net_rev
+year1_Grooming_units
+year1_Hospitalized_net_rev
+year1_Hospitalized_units
+year1_Laboratory_net_rev
+year1_Laboratory_units
+year1_Other_net_rev
+year1_Other_units
+year1_Parasite_net_rev
+year1_Parasite_units
+year1_Prescription_net_rev
+year1_Prescription_units
+year1_Radiology_net_rev
+year1_Radiology_units
+year1_Retail_net_rev
+year1_Retail_units
+year1_Surgery_net_rev
+year1_Surgery_units
+year1_Vaccination_net_rev
+year1_Vaccination_units
+year1_boarding_net_rev
+year1_boarding_units
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units
+
+year2_Dental_net_rev
+year2_Dental_units
+year2_Exam_net_rev
+year2_Exam_units
+year2_Food_net_rev
+year2_Food_units
+year2_Grooming_net_rev
+year2_Grooming_units
+year2_Hospitalized_net_rev
+year2_Hospitalized_units
+year2_Laboratory_net_rev
+year2_Laboratory_units
+year2_Other_net_rev
+year2_Other_units
+year2_Parasite_net_rev
+year2_Parasite_units
+year2_Prescription_net_rev
+year2_Prescription_units
+year2_Radiology_net_rev
+year2_Radiology_units
+year2_Retail_net_rev
+year2_Retail_units
+year2_Surgery_net_rev
+year2_Surgery_units
+year2_Vaccination_net_rev
+year2_Vaccination_units
+year2_boarding_net_rev
+year2_boarding_units
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units;
+run;
+
+
+/* checking price points*/
+data temp;
+ set ak.vaccination_y1 (keep = year1_Vaccination_price year1_Vaccination_units);
+price = round(year1_Vaccination_price,1);
+run;
+
+proc freq data = temp;
+tables price;
+run;
+
+proc means data = temp sum;
+class price;
+var year1_Vaccination_units; 
+run;
+
+/*Surgery Y1*/
+data ak.surgery_y1;
+ set ak.Client_1 (keep = year1_Surgery_net_rev
+year1_Surgery_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+bpt_1 = 0;
+bpt_2 = 0;
+bpt_3 = 0;
+bpt_4 = 0;
+bpt_5 = 0;
+bpt_6 = 0;
+bpt_7 = 0;
+bpt_8 = 0;
+if year1_Surgery_net_rev le 0 then delete;
+if year1_Surgery_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Surgery_price = year1_Surgery_net_rev/year1_Surgery_units;
+if year1_Surgery_price gt 2 then bpt_1 = 1;
+if year1_Surgery_price gt 5 then bpt_2 = 1;
+if year1_Surgery_price gt 13 then bpt_3 = 1;
+if year1_Surgery_price gt 16 then bpt_4 = 1;
+if year1_Surgery_price gt 18 then bpt_5 = 1;
+if year1_Surgery_price gt 23 then bpt_6 = 1;
+if year1_Surgery_price gt 26 then bpt_7 = 1;
+if year1_Surgery_price gt 29 then bpt_8 = 1;
+run;
+
+data temp;
+ set ak.surgery_y1 (keep = year1_Surgery_price year1_Surgery_units);
+price = round(year1_Surgery_price,1);
+run;
+
+proc means data = temp sum;
+class price;
+var year1_Surgery_units; 
+run;
+
+/*Hospitalized Y1*/
+data ak.Hospitalized_y1;
+ set ak.Client_1 (keep = year1_Hospitalized_net_rev
+year1_Hospitalized_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+bpt_1 = 0;
+bpt_2 = 0;
+if year1_Hospitalized_net_rev le 0 then delete;
+if year1_Hospitalized_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Hospitalized_price = year1_Hospitalized_net_rev/year1_Hospitalized_units;
+if year1_Hospitalized_price gt 3 then bpt_1 = 1;
+if year1_Hospitalized_price gt 7 then bpt_2 = 1;
+run;
+
+data temp;
+ set ak.Hospitalized_y1 (keep = year1_Hospitalized_price year1_Hospitalized_units);
+price = round(year1_Hospitalized_price,1);
+run;
+
+proc means data = temp sum;
+class price;
+var year1_Hospitalized_units; 
+run;
+
+/*Exam Y1*/
+data ak.Exam_y1;
+ set ak.Client_1 (keep = year1_Exam_net_rev
+year1_Exam_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+if year1_Exam_net_rev le 0 then delete;
+if year1_Exam_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Exam_price = year1_Exam_net_rev/year1_Exam_units;
+run;
+
+/*Radiology Y1*/
+data ak.Radiology_y1;
+ set ak.Client_1 (keep = year1_Radiology_net_rev
+year1_Radiology_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+if year1_Radiology_net_rev le 0 then delete;
+if year1_Radiology_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Radiology_price = year1_Radiology_net_rev/year1_Radiology_units;
+run;
+
+/*Prescription Y1*/
+data ak.Prescription_y1;
+ set ak.Client_1 (keep = year1_Prescription_net_rev
+year1_Prescription_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+if year1_Prescription_net_rev le 0 then delete;
+if year1_Prescription_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Prescription_price = year1_Prescription_net_rev/year1_Prescription_units;
+run;
+
+/*Laboratory Y1*/
+data ak.Laboratory_y1;
+ set ak.Client_1 (keep = year1_Laboratory_net_rev
+year1_Laboratory_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+if year1_Laboratory_net_rev le 0 then delete;
+if year1_Laboratory_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Laboratory_price = year1_Laboratory_net_rev/year1_Laboratory_units;
+run;
+
+/*Parasite Y1*/
+data ak.Parasite_y1;
+ set ak.Client_1 (keep = year1_Parasite_net_rev
+year1_Parasite_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+if year1_Parasite_net_rev le 0 then delete;
+if year1_Parasite_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Parasite_price = year1_Parasite_net_rev/year1_Parasite_units;
+run;
+
+/*Food Y1*/
+data ak.Food_y1;
+ set ak.Client_1 (keep = year1_Food_net_rev
+year1_Food_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units);
+if year1_Food_net_rev le 0 then delete;
+if year1_Food_units le 0 then delete;
+if year1_num_invoices le 0 then delete;
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+year1_Food_price = year1_Food_net_rev/year1_Food_units;
+run;
+
+/*Prescription Y2*/
+data ak.Prescription_y2;
+ set ak.Client_1 (keep = year2_Prescription_net_rev
+year2_Prescription_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Prescription_net_rev le 0 then delete;
+if year2_Prescription_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Prescription_price = year2_Prescription_net_rev/year2_Prescription_units;
+run;
+
+/*Laboratory Y2*/
+data ak.Laboratory_y2;
+ set ak.Client_1 (keep = year2_Laboratory_net_rev
+year2_Laboratory_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Laboratory_net_rev le 0 then delete;
+if year2_Laboratory_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Laboratory_price = year2_Laboratory_net_rev/year2_Laboratory_units;
+run;
+
+/*Surgery Y2*/
+data ak.Surgery_y2;
+ set ak.Client_1 (keep = year2_Surgery_net_rev
+year2_Surgery_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Surgery_net_rev le 0 then delete;
+if year2_Surgery_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Surgery_price = year2_Surgery_net_rev/year2_Surgery_units;
+run;
+
+/*Exam Y2*/
+data ak.Exam_y2;
+ set ak.Client_1 (keep = year2_Exam_net_rev
+year2_Exam_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Exam_net_rev le 0 then delete;
+if year2_Exam_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Exam_price = year2_Exam_net_rev/year2_Exam_units;
+run;
+
+/*Hospitalized Y2*/
+data ak.Hospitalized_y2;
+ set ak.Client_1 (keep = year2_Hospitalized_net_rev
+year2_Hospitalized_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Hospitalized_net_rev le 0 then delete;
+if year2_Hospitalized_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Hospitalized_price = year2_Hospitalized_net_rev/year2_Hospitalized_units;
+run;
+
+/*Parasite Y2*/
+data ak.Parasite_y2;
+ set ak.Client_1 (keep = year2_Parasite_net_rev
+year2_Parasite_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Parasite_net_rev le 0 then delete;
+if year2_Parasite_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Parasite_price = year2_Parasite_net_rev/year2_Parasite_units;
+run;
+
+/*Vaccination Y2*/
+data ak.Vaccination_y2;
+ set ak.Client_1 (keep = year2_Vaccination_net_rev
+year2_Vaccination_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Vaccination_net_rev le 0 then delete;
+if year2_Vaccination_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Vaccination_price = year2_Vaccination_net_rev/year2_Vaccination_units;
+run;
+
+/*Food Y2*/
+data ak.Food_y2;
+ set ak.Client_1 (keep = year2_Food_net_rev
+year2_Food_units
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units);
+if year2_Food_net_rev le 0 then delete;
+if year2_Food_units le 0 then delete;
+if year2_num_invoices le 0 then delete;
+if year2_tot_net_rev le 0 then delete;
+if year2_tot_units le 0 then delete;
+year2_Food_price = year2_Food_net_rev/year2_Food_units;
+run;
+
+/*Units Rev Y1*/
+data ak.Units_Rev_y1;
+ set ak.Client_1 (keep = year1_tot_net_rev
+year1_tot_units
+year1_Dental_net_rev
+year1_Dental_units
+year1_Exam_net_rev
+year1_Exam_units
+year1_Food_net_rev
+year1_Food_units
+year1_Grooming_net_rev
+year1_Grooming_units
+year1_Hospitalized_net_rev
+year1_Hospitalized_units
+year1_Laboratory_net_rev
+year1_Laboratory_units
+year1_Other_net_rev
+year1_Other_units
+year1_Parasite_net_rev
+year1_Parasite_units
+year1_Prescription_net_rev
+year1_Prescription_units
+year1_Radiology_net_rev
+year1_Radiology_units
+year1_Retail_net_rev
+year1_Retail_units
+year1_Surgery_net_rev
+year1_Surgery_units
+year1_Vaccination_net_rev
+year1_Vaccination_units
+year1_boarding_net_rev
+year1_boarding_units
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between
+year1_num_invoices);
+if year1_tot_net_rev le 0 then delete;
+if year1_tot_units le 0 then delete;
+if year1_Dental_net_rev le 0 then delete;
+if year1_Dental_units le 0 then delete;
+if year1_Exam_net_rev le 0 then delete;
+if year1_Exam_units le 0 then delete;
+if year1_Food_net_rev le 0 then delete;
+if year1_Food_units le 0 then delete;
+if year1_Grooming_net_rev le 0 then delete;
+if year1_Grooming_units le 0 then delete;
+if year1_Hospitalized_net_rev le 0 then delete;
+if year1_Hospitalized_units le 0 then delete;
+if year1_Laboratory_net_rev le 0 then delete;
+if year1_Laboratory_units le 0 then delete;
+if year1_Other_net_rev le 0 then delete;
+if year1_Other_units le 0 then delete;
+if year1_Parasite_net_rev le 0 then delete;
+if year1_Parasite_units le 0 then delete;
+if year1_Prescription_net_rev le 0 then delete;
+if year1_Prescription_units le 0 then delete;
+if year1_Radiology_net_rev le 0 then delete;
+if year1_Radiology_units le 0 then delete;
+if year1_Retail_net_rev le 0 then delete;
+if year1_Retail_units le 0 then delete;
+if year1_Surgery_net_rev le 0 then delete;
+if year1_Surgery_units le 0 then delete;
+if year1_Vaccination_net_rev le 0 then delete;
+if year1_Vaccination_units le 0 then delete;
+if year1_boarding_net_rev le 0 then delete;
+if year1_boarding_units le 0 then delete;
+run;
+
+/* Vaccination Y1*/
+proc reg data = ak.vaccination_y1;
+model year1_Vaccination_units = 
+year1_Vaccination_price 
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units
+bpt_3/vif collin;
+run;
+quit;
+
+/* Surgery Y1*/
+proc reg data = ak.surgery_y1;
+model year1_Surgery_units = 
+year1_Surgery_price 
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units
+bpt_1
+/vif collin;
+run;
+quit;
+
+/* Hospitalized Y1*/
+proc reg data = ak.Hospitalized_y1;
+model year1_Hospitalized_units = 
+year1_Hospitalized_price 
+CHECKOUT_PROCESS_y1
+HOSPITAL_ATMOSPHERE_y1
+LIKELY_RETURN_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units
+/vif collin;
+run;
+quit;
+
+/* Exam Y1*/
+proc reg data = ak.Exam_y1;
+model year1_Exam_units = 
+year1_Exam_price 
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units
+/vif collin;
+run;
+quit;
+
+/* Radiology Y1*/
+proc reg data = ak.Radiology_y1;
+model year1_Radiology_units = 
+year1_Radiology_price 
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+KEPT_INFORMED_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units
+/vif collin;
+run;
+quit;
+
+/* Prescription Y1*/
+proc reg data = ak.Prescription_y1;
+model year1_Prescription_units = 
+year1_Prescription_price 
+CARING_AT_HOME_y1
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_NEXT_VISIT_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units/vif collin;
+run;
+quit;
+
+/* Laboratory Y1*/
+proc reg data = ak.Laboratory_y1;
+model year1_Laboratory_units = 
+year1_Laboratory_price 
+CARING_AT_HOME_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+LIKELY_RETURN_y1
+PAYMENT_OPTIONS_y1
+PET_CARE_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+STAFF_PREPARED_y1
+VET_COMMUNICATE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_net_rev
+year1_tot_units/vif collin;
+run;
+quit;
+
+/* Parasite Y1*/
+proc reg data = ak.Parasite_y1;
+model year1_Parasite_units = 
+year1_Parasite_price 
+CHECKOUT_PROCESS_y1
+COST_NEXT_VISIT_y1
+FAIR_PRICES_y1
+HOSPITAL_ATMOSPHERE_y1
+KEPT_INFORMED_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_NEXT_VISIT_y1
+STAFF_FRIENDLY_y1
+VET_COMMUNICATE_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units/vif collin;
+run;
+quit;
+
+/* Food Y1*/
+proc reg data = ak.Food_y1;
+model year1_Food_units = 
+year1_Food_price 
+CARING_AT_HOME_y1
+FAIR_PRICES_y1
+LIKELY_RECOMMEND_y1
+LIKELY_RETURN_y1
+OVERALL_SAT_y1
+PAYMENT_OPTIONS_y1
+PET_NEXT_VISIT_y1
+VET_KNOWLEDGE_y1
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year1_num_invoices
+year1_tot_units/vif collin;
+run;
+quit;
+
+/* Prescription Y2*/
+proc reg data = ak.Prescription_y2;
+model year2_Prescription_units = 
+year2_Prescription_price 
+CARING_AT_HOME_y2
+FAIR_PRICES_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+/* Laboratory Y2*/
+proc reg data = ak.Laboratory_y2;
+model year2_Laboratory_units = 
+year2_Laboratory_price 
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_NEXT_VISIT_y2
+VET_COMMUNICATE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+/* Surgery y2*/
+proc reg data = ak.Surgery_y2;
+model year2_Surgery_units = 
+year2_Surgery_price 
+CHECKOUT_PROCESS_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+/* Exam y2*/
+proc reg data = ak.Exam_y2;
+model year2_Exam_units = 
+year2_Exam_price 
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+PET_NEXT_VISIT_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+/* Hospitalized y2*/
+proc reg data = ak.Hospitalized_y2;
+model year2_Hospitalized_units = 
+year2_Hospitalized_price 
+CHECKOUT_PROCESS_y2
+HOSPITAL_ATMOSPHERE_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PAYMENT_OPTIONS_y2
+STAFF_FRIENDLY_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+/* Parasite y2*/
+proc reg data = ak.Parasite_y2;
+model year2_Parasite_units = 
+year2_Parasite_price 
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+FAIR_PRICES_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+OVERALL_SAT_y2
+PET_CARE_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+VET_KNOWLEDGE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+/* Vaccination y2*/
+proc reg data = ak.vaccination_y2;
+model year2_Vaccination_units = 
+year2_Vaccination_price 
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+LIKELY_RETURN_y2
+PAYMENT_OPTIONS_y2
+PET_NEXT_VISIT_y2
+STAFF_FRIENDLY_y2
+STAFF_PREPARED_y2
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+/* Food y2*/
+proc reg data = ak.Food_y2;
+model year2_Food_units = 
+year2_Food_price 
+CARING_AT_HOME_y2
+CHECKOUT_PROCESS_y2
+COST_NEXT_VISIT_y2
+FAIR_PRICES_y2
+HOSPITAL_ATMOSPHERE_y2
+KEPT_INFORMED_y2
+LIKELY_RECOMMEND_y2
+OVERALL_SAT_y2
+PET_CARE_y2
+PET_NEXT_VISIT_y2
+STAFF_PREPARED_y2
+VET_COMMUNICATE_y2
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+TOTAL_CURRENT_PATIENTS
+avg_days_between 
+year2_num_invoices
+year2_tot_units/vif collin;
+run;
+quit;
+
+proc sql;
+ select count (distinct OID_CLINIC_DIM) as clinic_dim_cnt from in.Clinic_dim;
+quit;
+
+proc sql;
+ select count (distinct CLINIC_EXT_ID) as clinic_ext_cnt from in.Clinic_dim;
+quit;
+
+proc sql;
+ select count (distinct OID_CLINIC_DIM) as clinic_dim_cnt from ak.Client_1;
+quit;
+
+proc sql;
+ select count (distinct CLINIC_EXT_ID) as clinic_ext_cnt from ak.Client_1;
+quit;
+
+proc sort data = in.Clinic_dim nodupkey out = clinic_dim;
+by OID_CLINIC_DIM;
+run;
+
+proc sort data = ak.Client_1 ;
+by OID_CLINIC_DIM;
+run;
+
+data ak.Predictive;
+merge ak.Client_1 (in=a) clinic_dim (in=b);
+by OID_CLINIC_DIM;
+if a;
+run; 
+
+data ak.Predictive;
+ set ak.Predictive;
+CLINIC_EXT_ID_1 = CLINIC_EXT_ID * 1;
+run;
+
+data ak.Predictive (rename = (CLINIC_EXT_ID_1 = CLINIC_EXT_ID));
+ set ak.Predictive (drop = CLINIC_EXT_ID);
+run;
+
+proc sort data = in.Hospital_stats_au nodupkey out = hospital_stats;
+by CLINIC_EXT_ID;
+run;
+
+proc sort data = ak.Predictive ;
+by CLINIC_EXT_ID;
+run;
+
+data ak.Predictive;
+merge ak.Predictive (in=a) hospital_stats (in=b);
+by CLINIC_EXT_ID;
+if a;
+run; 
+
+proc sql;
+ select count (distinct OID_CLIENT_DIM) as cnt from in.Patient_dim;
+quit;
+
+proc sort data = in.Patient_dim;
+by OID_CLIENT_DIM;
+run;
+
+proc means data = in.Patient_dim n;
+by OID_CLIENT_DIM;
+var OID_PATIENT_DIM;
+where OID_CLIENT_DIM = 6311049; 
+run;
+
+proc print data = ak.Predictive;
+var TOTAL_CURRENT_PATIENTS;
+where OID_CLIENT_DIM = 6311049; 
+run;
+
+proc means data = in.Patient_dim noprint;
+ by OID_CLIENT_DIM;
+ var AGE WEIGHT;
+output out = patient (drop = _type_ _freq_) mean(AGE) = avg_age_pet mean(WEIGHT) = avg_wt_pet;
+run;
+
+proc contents data = patient;
+run;
+
+proc sort data = patient nodupkey;
+by OID_CLIENT_DIM;
+run;
+
+proc sort data = ak.Predictive nodupkey;
+by OID_CLIENT_DIM;
+run;
+
+data ak.Predictive;
+merge ak.Predictive (in=a) patient (in=b);
+by OID_CLIENT_DIM;
+if a;
+run; 
+
+proc contents data = ak.Predictive;
+run;
+
+data ak.Predictive;
+ set ak.Predictive;
+visit_freq = last_invoice_date - first_invoice_date;
+run;
+
+proc univariate data = ak.Predictive;
+var visit_freq;
+run;
+
+proc print data = ak.Predictive;
+var visit_freq;
+where visit_freq < 0;
+run;
+
+proc freq data = ak.Predictive;
+tables CLINIC_CLASS;
+run;
+
+/** Prescription **/
+
+data ak.logistic_prescription;
+ set ak.Predictive (keep = year2_Prescription_units
+Bedroom_community
+HAS_VALID_EMAIL
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+visit_other_last2yr
+visit_sick_pet_last2yr
+visit_type5_last2yr
+visit_well_pet_last2yr
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units
+visit_freq);
+prescription = 0;
+if year2_Prescription_units > 0 then prescription = 1;
+run;
+
+proc means data = ak.logistic_prescription n nmiss;
+run;
+
+proc univariate data = ak.logistic_prescription;
+run;
+
+data ak.logistic_prescription;
+ set ak.logistic_prescription;
+ if year2_tot_net_rev < 0 then delete;
+ if year2_tot_units < 0 then delete;
+ if revenue_last2yr < 0 then delete;
+ if vet_years_experience > 90 then delete;
+ if visit_freq < 0 then delete;
+run;
+
+proc reg data = ak.logistic_prescription;
+model prescription = 
+/*Bedroom_community*/
+/*HAS_VALID_EMAIL*/
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+/*visit_other_last2yr*/
+visit_sick_pet_last2yr
+/*visit_type5_last2yr*/
+visit_well_pet_last2yr
+/*year2_num_invoices*/
+year2_tot_net_rev
+/*year2_tot_units*/
+visit_freq /VIF TOL;
+run;
+quit;
+
+/*** Logistic Regression Model ***/
+title "Logistic Regression Model";
+proc logistic data = ak.logistic_prescription descending;
+model prescription = 
+/*Bedroom_community*/
+/*HAS_VALID_EMAIL*/
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+/*visit_other_last2yr*/
+visit_sick_pet_last2yr
+/*visit_type5_last2yr*/
+visit_well_pet_last2yr
+/*year2_num_invoices*/
+year2_tot_net_rev
+/*year2_tot_units*/
+visit_freq /details CLPARM = WALD lackfit;
+output out = predicted predicted = p;
+run;
+quit;
+
+/** Surgery **/
+
+data ak.logistic_surgery;
+ set ak.Predictive (keep = year2_Surgery_units
+Bedroom_community
+HAS_VALID_EMAIL
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+visit_other_last2yr
+visit_sick_pet_last2yr
+visit_type5_last2yr
+visit_well_pet_last2yr
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units
+visit_freq);
+surgery = 0;
+if year2_Surgery_units > 0 then surgery = 1;
+run;
+
+data ak.logistic_surgery;
+ set ak.logistic_surgery;
+ if year2_tot_net_rev < 0 then delete;
+ if year2_tot_units < 0 then delete;
+ if revenue_last2yr < 0 then delete;
+ if vet_years_experience > 90 then delete;
+ if visit_freq < 0 then delete;
+run;
+
+proc reg data = ak.logistic_surgery;
+model surgery = 
+/*Bedroom_community*/
+/*HAS_VALID_EMAIL*/
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+/*visit_other_last2yr*/
+visit_sick_pet_last2yr
+/*visit_type5_last2yr*/
+visit_well_pet_last2yr
+/*year2_num_invoices*/
+year2_tot_net_rev
+/*year2_tot_units*/
+visit_freq /VIF TOL;
+run;
+quit;
+
+/*** Logistic Regression Model ***/
+title "Logistic Regression Model";
+proc logistic data = ak.logistic_surgery descending;
+model surgery = 
+/*Bedroom_community*/
+/*HAS_VALID_EMAIL*/
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+/*visit_other_last2yr*/
+visit_sick_pet_last2yr
+/*visit_type5_last2yr*/
+visit_well_pet_last2yr
+/*year2_num_invoices*/
+year2_tot_net_rev
+/*year2_tot_units*/
+visit_freq /details CLPARM = WALD lackfit;
+output out = predicted predicted = p;
+run;
+quit;
+
+/** Laboratory **/
+
+data ak.logistic_laboratory;
+ set ak.Predictive (keep = year2_Laboratory_units
+Bedroom_community
+HAS_VALID_EMAIL
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+visit_other_last2yr
+visit_sick_pet_last2yr
+visit_type5_last2yr
+visit_well_pet_last2yr
+year2_num_invoices
+year2_tot_net_rev
+year2_tot_units
+visit_freq);
+laboratory = 0;
+if year2_Laboratory_units > 0 then laboratory = 1;
+run;
+
+data ak.logistic_laboratory;
+ set ak.logistic_laboratory;
+ if year2_tot_net_rev < 0 then delete;
+ if year2_tot_units < 0 then delete;
+ if revenue_last2yr < 0 then delete;
+ if vet_years_experience > 90 then delete;
+ if visit_freq < 0 then delete;
+run;
+
+proc reg data = ak.logistic_laboratory;
+model laboratory = 
+/*Bedroom_community*/
+/*HAS_VALID_EMAIL*/
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+/*visit_other_last2yr*/
+visit_sick_pet_last2yr
+/*visit_type5_last2yr*/
+visit_well_pet_last2yr
+/*year2_num_invoices*/
+year2_tot_net_rev
+/*year2_tot_units*/
+visit_freq /VIF TOL;
+run;
+quit;
+
+/*** Logistic Regression Model ***/
+title "Logistic Regression Model";
+proc logistic data = ak.logistic_laboratory descending;
+model laboratory = 
+/*Bedroom_community*/
+/*HAS_VALID_EMAIL*/
+IS_CURRENT_CAT_OWNER
+IS_CURRENT_DOG_OWNER
+MEDIAN_HH_INCOME
+MEDIAN_HH_NETWORTH
+Marketing_spend_2014
+Military_community
+PERC_UNEMPLOYED
+Retirement_community
+Rural_area
+TOTAL_CURRENT_PATIENTS
+Urban_area
+avg_age_pet
+avg_days_between
+avg_wt_pet
+median_age
+no_orders_last2yr
+num_competition
+perc_hh_with_kids
+perc_turnover_vet
+revenue_last2yr
+tenure_vet
+vet_years_experience
+visit_no_pet_last2yr
+/*visit_other_last2yr*/
+visit_sick_pet_last2yr
+/*visit_type5_last2yr*/
+visit_well_pet_last2yr
+/*year2_num_invoices*/
+year2_tot_net_rev
+/*year2_tot_units*/
+visit_freq /details CLPARM = WALD lackfit;
+output out = predicted predicted = p;
+run;
+quit;
